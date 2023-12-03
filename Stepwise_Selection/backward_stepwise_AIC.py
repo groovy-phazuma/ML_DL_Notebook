@@ -46,27 +46,27 @@ def backward_stepwise(x, y, method='BIC',verbose=False):
     x_tmp = np.concatenate(
         [np.reshape(np.ones(x.shape[0]), (x.shape[0],1)), x], axis=1
     ) 
-    included = list([0]) # initial column
+    ext_l = list([0]) # initial column
     while True:
         changed = False
-        excluded = list(set(np.arange(x_tmp.shape[1]))-set(included) )
-        result = np.zeros(len(excluded))
+        inc_l = list(set(np.arange(x_tmp.shape[1]))-set(ext_l))
+        result = np.zeros(len(inc_l))
         if method == 'AIC':
-            base_result = AIC(x_tmp[:, included], y) # calc base AIC
+            base_result = AIC(x_tmp[:, inc_l], y) # calc base AIC
         else:
-            base_result = BIC(x_tmp[:, included], y) # cal base BIC
+            base_result = BIC(x_tmp[:, inc_l], y) # cal base BIC
         if verbose:
             print('Baseline model with {}:{:}'.format(method, base_result))
         j = 0
-        for new_column in excluded:
+        for new_column in inc_l:
             if method == 'AIC':
-                result[j] = AIC(x_tmp[:, included + [new_column]], y) # add other column and calc AIC
+                result[j] = AIC(x_tmp[:, sorted(list(set(inc_l) - set([new_column])))], y) # add other column and calc AIC
             else:     
-                result[j] = BIC(x_tmp[:, included + [new_column]], y) # add other column and calc BIC
+                result[j] = BIC(x_tmp[:, sorted(list(set(inc_l) - set([new_column])))], y) # add other column and calc BIC
             j += 1
         if result.min() < base_result:
-            best_feature = excluded[result.argmin()]
-            included.append(best_feature)
+            best_feature = inc_l[result.argmin()]
+            ext_l.append(best_feature)
             changed = True
             if verbose:
                 print('Finally Add {:15} with {} {:}'.format(best_feature, method, result.min()))
@@ -77,10 +77,10 @@ def backward_stepwise(x, y, method='BIC',verbose=False):
                 
     # final result
     beta = np.reshape(np.zeros(x_tmp.shape[1]), (x_tmp.shape[1],1))
-    beta = backward_stepwise_result(x_tmp[:, included], y)
-    included.pop(0) # remove initial column
-    included_r = [ i - 1 for i in included]
-    included_column = [x.columns.tolist()[idx] for idx in included_r]
+    final_l = sorted(list(set(np.arange(x_tmp.shape[1])) - set(ext_l)))
+    beta = backward_stepwise_result(x_tmp[:, final_l], y)
+    final_r = [ i - 1 for i in final_l]
+    included_column = [x.columns.tolist()[idx] for idx in final_r]
     result_min = base_result
 
     return beta, included_column, result_min
@@ -112,3 +112,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+# %%
