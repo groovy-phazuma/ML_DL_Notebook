@@ -9,6 +9,7 @@ link prediction with ce-graph
 # %%
 import itertools
 import numpy as np
+import pandas as pd
 import scipy.sparse as sp
 
 import torch
@@ -16,11 +17,37 @@ import torch.nn as nn
 import torch.nn.functional as F
 import dgl
 from dgl.data.utils import load_graphs
+
 base_dir = '/workspace/home/azuma/Personal_Projects/github/ML_DL_Notebook/'
+import sys
+sys.path.append(base_dir)
+from Homo_GNN._utils import handling
 
 # %% Load dataset
 glist, _ = load_graphs(base_dir + '_datasource/cell_graph/consep_test10_cg.bin')
 g = glist[0]
+type_list = pd.read_pickle(base_dir + '_datasource/cell_graph/consep_test10_type_list.pkl')
+type_list = handling.relabel(type_list,start=1)
+print(set(type_list))
+
+
+u, v = g.edges() # 4337 edges
+edge_idx = [[] for _ in range(max(type_list)+1)]
+for i in range(len(u)):
+    u_type =  type_list[u.tolist()[i]]
+    v_type = type_list[v.tolist()[i]]
+    if u_type == v_type:
+        edge_idx[u_type].append(i)
+    else:
+        edge_idx[0].append(i)
+
+for i in range(len(edge_idx)):
+    if i == 0:
+        print(f'Inter edges: {len(edge_idx[0])}')
+    else:
+        print(f'Inner between {i} edges: {len(edge_idx[i])}')
+
+
 
 # %% Prepare training and test sets
 u, v = g.edges() # 4337 edges
