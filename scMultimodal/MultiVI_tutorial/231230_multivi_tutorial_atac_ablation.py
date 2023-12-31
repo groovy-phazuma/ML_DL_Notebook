@@ -1,16 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Created on 2023-12-10 (Sun) 21:01:12
+Created on 2023-12-29 (Fri) 14:30:34
 
-MultiVI tutorial
-
-References
-- https://docs.scvi-tools.org/en/stable/tutorials/notebooks/multimodal/MultiVI_tutorial.html
-
-
-! pip install pooch
-! pip install scvi-tools
-! pip install scanpy
+MultiVi tutorial for atac only
 
 @author: I.Azuma
 """
@@ -70,12 +62,18 @@ We can now split the dataset to three datasets, and remove a modality from two o
 # split to three datasets by modality (RNA, ATAC, Multiome), and corrupt data
 # by remove some data to create single-modality data
 n = 4004
-adata_rna = adata[:n, adata.var.modality == "Gene Expression"].copy()
+#adata_rna = adata[:n, adata.var.modality == "Gene Expression"].copy()
 adata_paired = adata[n : 2 * n].copy()
 adata_atac = adata[2 * n :, adata.var.modality == "Peaks"].copy()
 
+# Filter size to avoid rendering error
+narrow = 500
+#adata_rna = adata_rna[:narrow].copy()
+adata_paired = adata_paired[:narrow].copy()
+adata_atac = adata_atac[:narrow].copy()
+
 # We can now use the organizing method from scvi to concatenate these anndata
-adata_mvi = scvi.data.organize_multiome_anndatas(adata_paired, adata_rna, adata_atac)
+adata_mvi = scvi.data.organize_multiome_anndatas(multi_anndata=adata_paired, atac_anndata=adata_atac)
 
 display(adata_mvi.obs)
 """
@@ -88,6 +86,7 @@ display(adata_mvi.var)
 print(adata_mvi.shape)
 sc.pp.filter_genes(adata_mvi, min_cells=int(adata_mvi.shape[0] * 0.01))
 print(adata_mvi.shape)
+
 
 # %% Setup and Training MultiVI
 scvi.model.MULTIVI.setup_anndata(adata_mvi, batch_key="modality")
@@ -114,3 +113,7 @@ sc.pl.umap(adata_mvi, color="modality")
 
 # %% Impute missing modality
 imputed_expression = model.get_normalized_expression()
+
+gene_idx = np.where(adata_mvi.var.index == "CD3G")[0]
+adata_mvi.obs["CD3G_imputed"] = imputed_expression.iloc[:, gene_idx]
+sc.pl.umap(adata_mvi, color="CD3G_imputed")

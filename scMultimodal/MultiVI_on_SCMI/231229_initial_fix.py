@@ -39,7 +39,9 @@ test_atac = scipy.sparse.csr_matrix(test_atac) # update
 # prep atac info
 tmp_ids = list(inputs_idx['columns'])
 atac_info = pd.DataFrame({'ID':tmp_ids,'modality':['Peaks']*len(tmp_ids)},index=tmp_ids)
-atac_batch = pd.DataFrame({'batch_id':[1]*len(atac_info)},index=atac_info.index.tolist())
+
+atac_batch = pd.DataFrame(index=test_samples)
+atac_batch['batch_id']=[1]*len(test_samples)
 
 # %% train test split for RNA
 rna_array = rna_targets.toarray() # (9300, 23418)
@@ -54,19 +56,23 @@ paired_array = np.hstack([train_rna, train_atac]) # (6510, 23418+228942)
 paired_columns = np.hstack([targets_idx['columns'],inputs_idx['columns']])
 
 paired_csr = scipy.sparse.csr_matrix(paired_array)
-paired_csr = paired_csr.astype('float16', copy=False)
 
 # prep paired info
 tmp_ids = list(targets_idx['columns'])+list(inputs_idx['columns'])
 paired_info = pd.DataFrame({'ID':tmp_ids,'modality':['Gene Expression']*len(targets_idx['columns'])+['Peaks']*len(inputs_idx['columns'])},index=tmp_ids)
-paired_batch = pd.DataFrame({'batch_id':[1]*len(paired_info)},index=paired_info.index.tolist())
+
+paired_batch = pd.DataFrame(index=train_samples)
+paired_batch['batch_id'] = [1]*len(train_samples)
 
 # %% process for AnnData
+paired_csr = paired_csr.astype('int64',copy=False)
+test_atac = test_atac.astype('int64',copy=False)
+
 adata_paired = AnnData(paired_csr)
 adata_atac = AnnData(test_atac)
 
 adata_paired.var = paired_info # add info
-adata_paired.obs = paied_batch
+adata_paired.obs = paired_batch
 
 adata_atac.var = atac_info # add info
 adata_atac.obs = atac_batch
@@ -96,6 +102,7 @@ save_dir = tempfile.TemporaryDirectory()
 # We can now use the organizing method from scvi to concatenate these anndata
 adata_mvi = scvi.data.organize_multiome_anndatas(multi_anndata=adata_paired, atac_anndata=adata_atac)
 
+obs_info = adata_mvi.obs
 display(adata_mvi.obs)
 
 adata_mvi = adata_mvi[:, adata_mvi.var["modality"].argsort()].copy()
@@ -105,6 +112,13 @@ display(adata_mvi.var)
 print(adata_mvi.shape) # (9300, 252360)
 sc.pp.filter_genes(adata_mvi, min_cells=int(adata_mvi.shape[0] * 0.01))
 print(adata_mvi.shape) # (9300, 111356)
+
+"""
+AnnData object with n_obs × n_vars = 9300 × 111356
+    obs: 'batch_id', 'modality', '_indices', '_scvi_batch', '_scvi_labels'
+    var: 'ID', 'modality', 'n_cells'
+    uns: '_scvi_uuid', '_scvi_manager_uuid'
+"""
 
 # %% Setup and Training MultiVI
 scvi.model.MULTIVI.setup_anndata(adata_mvi, batch_key="modality")
@@ -125,4 +139,15 @@ model = scvi.model.MULTIVI.load(model_dir, adata=adata_mvi)
 # %%
 tmp = sc.read_h5ad("/workspace/mnt/data1/MSCI/10x_multiome/paired.h5ad")
 
+# %% Impute missing modality
+imputed_expression = model.get_normalized_expression()
+#imputed_expression.to_csv('/workspace/mnt/data1/MSCI/results/231230/imputed_exp.csv')
+
+# %% visualize the latent space
+MULTIVI_LATENT_KEY = "X_multivi"
+
+adata_mvi.obsm[MULTIVI_LATENT_KEY] = model.get_latent_representation()
+sc.pp.neighbors(adata_mvi, use_rep=MULTIVI_LATENT_KEY)
+sc.tl.umap(adata_mvi, min_dist=0.2)
+sc.pl.umap(adata_mvi, color="modality")
 # %%
