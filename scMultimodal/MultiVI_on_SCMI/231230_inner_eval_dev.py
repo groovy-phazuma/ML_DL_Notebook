@@ -45,7 +45,7 @@ pred_test = res_df.loc[test_samples][gene_id].tolist()
 true_train = list(train_rna[:,idx])
 true_test = list(test_rna[:,idx])
 
-pu.plot_scatter(data1=[true_train],data2=[pred_train],xlabel="True Value",ylabel="Predicted Value",title=gene_id+"(ATP8B4): train",do_plot=True)
+#pu.plot_scatter(data1=[true_train],data2=[pred_train],xlabel="True Value",ylabel="Predicted Value",title=gene_id+"(ATP8B4): train",do_plot=True)
 pu.plot_scatter(data1=[true_test],data2=[pred_test],xlabel="True Value",ylabel="Predicted Value",title=gene_id+"(ATP8B4): test",do_plot=True)
 
 # %% overall evaluation
