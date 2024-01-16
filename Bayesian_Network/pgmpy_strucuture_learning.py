@@ -66,7 +66,7 @@ time1 = time.time()
 if METHOD == "PC":
     network = PC(df_new)
     best_network = network.estimate()
-elif METHODD == "HillClimb-BS":
+elif METHOD == "HillClimb-BS":
     network = HillClimbSearch(df_new)
     best_network = network.estimate(scoring_method=BicScore(df_new))
 elif METHOD == "HillClimb-KS":
@@ -93,10 +93,7 @@ for e in edge_list:
     src = e[0]
     dst = e[1]
     w = abs_adj[src][dst]
-    if w > 0.1:
-        g.add_edge(src,dst,weight=w)
-    else:
-        pass
+    g.add_edge(src,dst,weight=w)
 
 # display
 pos = nx.spring_layout(g, seed=0)
@@ -105,7 +102,7 @@ nx.draw_networkx(g, pos)
 plt.show()
 
 
-nx.write_gml(g,f'/workspace/home/azuma/Personal_Projects/BayesianNetwork/results/{METHOD}_wine_240111.gml')
+nx.write_gml(g,f'/workspace/home/azuma/Personal_Projects/BayesianNetwork/results/{METHOD}_wine_240116.gml')
 
 # %%
 
