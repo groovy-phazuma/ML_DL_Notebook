@@ -150,4 +150,3 @@ adata_mvi.obsm[MULTIVI_LATENT_KEY] = model.get_latent_representation()
 sc.pp.neighbors(adata_mvi, use_rep=MULTIVI_LATENT_KEY)
 sc.tl.umap(adata_mvi, min_dist=0.2)
 sc.pl.umap(adata_mvi, color="modality")
-# %%
