@@ -39,7 +39,7 @@ class DiegoNMF():
         W0 = np.random.random((self.num_rows, self.num_factors))*np.sqrt(self.variance)
         H0 = np.random.random((self.num_factors, self.num_targets))*np.sqrt(self.variance)
         # normalization
-        H0 = (H0.T / np.sqrt(np.sum(H0*H0,axis=1))).T
+        H0 = (H0.T / np.sqrt(np.sum(H0*H0,axis=1))).T  # (n_factor, n_targets)
 
         # epsilon based on machine precision
         sqrteps = np.sqrt(np.spacing(1))
@@ -56,7 +56,7 @@ class DiegoNMF():
         last_log = self.calc_loss(W0,H0)
         for i in pbar:
             # update W
-            numer = (CT*self.R).dot(H0.T) # CT*R is same to original R
+            numer = (CT*self.R).dot(H0.T)  # CT*R is same to original R
             denom = (CT*(W0.dot(H0)) + self.alpha*UN*W0.dot(H0)).dot(H0.T) + np.spacing(numer) # matlab eps = numpy spacing
             # W = max(0,W0*(numer/denom))
             W = W0*(numer/denom)
@@ -143,3 +143,44 @@ class DiegoNMF():
         sns.heatmap(self.W.dot(self.H))
         plt.title("R' ~ W * H")
         plt.show()
+
+def main(path_dataset):
+    u_features, v_features, rating_mx_train, train_labels, u_train_idx, v_train_idx, \
+    val_labels, u_val_idx, v_val_idx, test_labels, u_test_idx, v_test_idx, class_values = ru.load_data(path_dataset= path_dataset, seed=1234, verbose=True)
+
+    X = np.array(rating_mx_train.todense())
+    mask = np.zeros(X.shape)
+    mask[u_train_idx,v_train_idx]=1  # binary mask
+
+    # Non-negative matrix factorization
+    NMF = nmf.DiegoNMF(num_factors=50,alpha=0.05,tolx=1e-2,
+                    max_iter=100,variance=0.01,verbose=True)
+    NMF.fix_model(mask=mask, intMat=X)
+    output = NMF.W.dot(NMF.H)
+
+    pred_labels = output[u_test_idx,v_test_idx]
+    pu.plot_scatter([test_labels],[pred_labels],do_plot=True,title="Non-negative Matrix Factorization")
+
+    """
+    ---Completed---
+    iter : 69 delta : 0.009639518942249781
+
+    total_R = 0.0093
+    RMSE = 46.4286
+    """
+
+if __name__ == '__main__':
+    BASE_DIR = '/workspace/mnt/cluster/HDD/azuma/Others/github/ML_DL_Notebook'
+    import numpy as np
+    import sys
+    sys.path.append(BASE_DIR)
+    sys.path.append(BASE_DIR+'/Recommendation')
+
+    from MF import nmf
+    import recomm_utils as ru
+    from _utils import plot_utils as pu
+
+    #  Load dataset
+    path_dataset = BASE_DIR+'/_datasource/yahoo_music/training_test_dataset.mat'
+
+    main(path_dataset)
