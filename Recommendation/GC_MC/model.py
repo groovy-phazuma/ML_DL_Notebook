@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 from layers import RGCLayer, DenseLayer
 
-
 # Main Model
 class GAE(nn.Module):
     def __init__(self, config, weight_init):
@@ -25,11 +24,13 @@ class GCEncoder(nn.Module):
         self.num_users = config.num_users
         self.accum = config.accum
 
+        
         self.rgc_layer = RGCLayer(config, weight_init)
         self.dense_layer = DenseLayer(config, weight_init)
 
     def forward(self, x, edge_index, edge_type, edge_norm):
         features = self.rgc_layer(x, edge_index, edge_type, edge_norm)
+        print('model.py:',features.shape)
         u_features, i_features = self.separate_features(features)
         u_features, i_features = self.dense_layer(u_features, i_features)
 

@@ -72,12 +72,13 @@ def stack(features, index, relations, dim_size):
     ------
     out : tensor(relation * nodes x out_dim)
     """
-    out = torch.zeros(dim_size * (torch.max(relations) + 1), features.shape[1])
-    tar_idx = relations * dim_size + index
-    out[tar_idx] = features
-    # for feature, idx, relation in zip(features, index, relations):
-    #     tar_idx = relation * dim_size + index
-    #     out[tar_idx] = feature
+    out = torch.zeros((dim_size * (torch.max(relations) + 1), features.shape[1]))  # (num_node*rel, out_dim)
+    print(out.shape)
+
+    for feature, relation in zip(features, relations):
+        tar_idx = relation * dim_size
+        out[tar_idx] = feature
+
     return out
     
 
