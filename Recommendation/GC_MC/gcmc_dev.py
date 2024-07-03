@@ -92,4 +92,5 @@ optimizer.step()
 
 rmse = self.calc_rmse(out[self.data.train_idx], self.data.train_gt)
 return loss.item(), rmse.item()
+
 # %%

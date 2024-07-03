@@ -105,8 +105,8 @@ class RGCLayer(MessagePassing):
 
             # weight (R x (in_dim * out_dim)) reshape to (R * in_dim) x out_dim
             # weight has all nodes features
-            weight = weight.reshape(-1, self.out_c)
-            print('layers.py: weight shape',weight.shape)  # 13125(relation * nodes)x500
+            weight = weight.reshape(-1, self.out_c)  # 13125(relation * nodes)x500
+            
             # index has target features index in weitht matrixs
             #index = edge_type * self.in_c + x_j
             index = self.num_relations * self.in_c + x_j
