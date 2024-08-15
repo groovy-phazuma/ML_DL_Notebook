@@ -53,8 +53,12 @@ Darker, Flat, Mixなどがありますが、デフォルトで十分満足です
       "",
       "@author: I.Azuma",
       "\"\"\""
+      ],
+  "prefix": "coding start",
+  "body": [
+      "\"\"\" ↓ Coding Start $CURRENT_YEAR-$CURRENT_MONTH-$CURRENT_DATE ($CURRENT_DAY_NAME_SHORT) $CURRENT_HOUR:$CURRENT_MINUTE:$CURRENT_SECOND @author: I.Azuma \"\"\""
       ]
-  }
+    }
 }
 ```
 ```get_start```とスクリプトに入力すると、打刻とauthor情報を記載することができます。こんな感じ。
