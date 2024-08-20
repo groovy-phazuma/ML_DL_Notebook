@@ -44,22 +44,25 @@ Darker, Flat, Mixなどがありますが、デフォルトで十分満足です
 左下の歯車から```User Snippets```を選択し、python.jsonファイルを編集しましょう。
 ```json
 {
-  "sample1": {
-  "prefix": "get_start",
-  "body": [
-      "# -*- coding: utf-8 -*-",
-      "\"\"\"",
-      "Created on $CURRENT_YEAR-$CURRENT_MONTH-$CURRENT_DATE ($CURRENT_DAY_NAME_SHORT) $CURRENT_HOUR:$CURRENT_MINUTE:$CURRENT_SECOND",
-      "",
-      "@author: I.Azuma",
-      "\"\"\""
-      ],
-  "prefix": "coding start",
-  "body": [
-      "\"\"\" ↓ Coding Start $CURRENT_YEAR-$CURRENT_MONTH-$CURRENT_DATE ($CURRENT_DAY_NAME_SHORT) $CURRENT_HOUR:$CURRENT_MINUTE:$CURRENT_SECOND @author: I.Azuma \"\"\""
-      ]
-    }
+	"sample1": {
+    "prefix": "get_start",
+    "body": [
+			"# -*- coding: utf-8 -*-",
+			"\"\"\"",
+			"Created on $CURRENT_YEAR-$CURRENT_MONTH-$CURRENT_DATE ($CURRENT_DAY_NAME_SHORT) $CURRENT_HOUR:$CURRENT_MINUTE:$CURRENT_SECOND",
+			"",
+			"@author: I.Azuma",
+			"\"\"\""
+			]
+		},
+	"sample2": {
+    "prefix": "coding start",
+	"body": [
+			"\"\"\" ↓ Coding Start $CURRENT_YEAR-$CURRENT_MONTH-$CURRENT_DATE ($CURRENT_DAY_NAME_SHORT) $CURRENT_HOUR:$CURRENT_MINUTE:$CURRENT_SECOND @author: I.Azuma \"\"\""
+			]
+		}
 }
+
 ```
 ```get_start```とスクリプトに入力すると、打刻とauthor情報を記載することができます。こんな感じ。
 ```Python
