@@ -11,7 +11,7 @@ class GAE(nn.Module):
 
     def forward(self, x, edge_index, edge_type, edge_norm):
         u_features, i_features = self.gcenc(x, edge_index, edge_type, edge_norm)
-        #adj_matrices = self.bidec(u_features, i_features)
+        adj_matrices = self.bidec(u_features, i_features)
 
         return adj_matrices
 

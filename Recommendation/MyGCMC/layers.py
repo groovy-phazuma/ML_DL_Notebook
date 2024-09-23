@@ -33,6 +33,17 @@ class RGCLayer(MessagePassing):
 
         self.reset_parameters()
 
+        if config.accum == 'split_stack':
+            # each 100 dimention has each realtion node features
+            # user-item-weight-sharing
+            self.base_weight = nn.Parameter(torch.Tensor(
+                max(self.num_users, self.num_item), self.out_c))
+            self.dropout = nn.Dropout(self.drop_prob)
+        else:
+            # ordinal basis matrices in_c * out_c = 2625 * 500
+            ord_basis = [nn.Parameter(torch.Tensor(1, in_c * out_c)) for r in range(self.num_relations)]
+            self.ord_basis = nn.ParameterList(ord_basis)
+
     def reset_parameters(self):
         for basis in self.ord_basis:
             self.weight_init(basis, self.in_c, self.out_c)
@@ -53,26 +64,32 @@ class RGCLayer(MessagePassing):
 
     def message(self, x_j, edge_type, edge_norm):
         # create weight using ordinal weight sharing
-        for relation in range(self.num_relations):
-            if relation == 0:
-                weight = self.ord_basis[relation]
-            else:
-                weight = torch.cat((weight, weight[-1] 
-                    + self.ord_basis[relation]), 0)
+        if self.accum == 'split_stack':
+            weight = torch.cat((self.base_weight[:self.num_users],
+                self.base_weight[:self.num_item]), 0)
+            # weight = self.dropout(weight)
+            index = x_j
+            
+        else:
+            for relation in range(self.num_relations):
+                if relation == 0:
+                    weight = self.ord_basis[relation]
+                else:
+                    weight = torch.cat((weight, weight[-1] 
+                        + self.ord_basis[relation]), 0)
 
-        # weight (R x (in_dim * out_dim)) reshape to (R * in_dim) x out_dim
-        # weight has all nodes features
-        print('layers.py: weight shape',weight.shape)
-        weight = weight.reshape(-1, self.out_c)
-         # (relation * nodes)x(hiddien)  e.g. (13125, 500)
-        # index has target features index in weight matrices
-        index = edge_type * self.in_c + x_j
-        #index = self.num_relations * self.in_c + x_j
+            # weight (R x (in_dim * out_dim)) reshape to (R * in_dim) x out_dim
+            # weight has all nodes features
+            weight = weight.reshape(-1, self.out_c)
+            # index has target features index in weight matrix
+            index = edge_type * self.in_c + x_j
+            # this opration is that index(160000) specify the nodes idx in weight matrix
+            # for getting the features corresponding edge_index
 
-        weight = self.node_dropout(weight)
-        print('layers.py: weight shape',weight.shape)
-        out = weight[index]  # out is nodes(2625) x hidden(500)
+        #weight = self.node_dropout(weight)
+        out = weight[index]
 
+        # out is edges(160000) x hidden(500)
         return out if edge_norm is None else out * edge_norm.reshape(-1, 1)
     
     def node_dropout(self, weight):
@@ -83,10 +100,9 @@ class RGCLayer(MessagePassing):
             [drop_mask for r in range(self.num_relations)],
             dim=0,
         ).unsqueeze(1)
-
         drop_mask = drop_mask.expand(drop_mask.size(0), self.out_c)
 
-        assert weight.shape == drop_mask.shape
+        assert weight.shape == drop_mask.shape, f'{weight.shape} != {drop_mask.shape}'
         
         weight = weight.cpu()
         drop_mask = drop_mask.cpu()

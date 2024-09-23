@@ -5,7 +5,7 @@ weight_decay: 0
 drop_prob: 0.7
 
 # network
-accum: mean  #accum: split_stack
+accum: split_stack  #accum: split_stack
 hidden_size: 
   - 500
   - 75
