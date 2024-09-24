@@ -38,10 +38,15 @@ cfg = Config(cfg)
 # add some params to config
 cfg.num_nodes = raw_data.num_nodes
 cfg.num_relations = raw_data.num_relations
-cfg.num_users = int(data.num_users)
+cfg.num_users = int(data.num_users)  # 943/2625
 
-#dat = RGCLayer(config=cfg, weight_init=random_init)
-#dat(x=data.x, edge_index=data.edge_index, edge_type=data.edge_type, edge_norm=None)
+base_weight = nn.Parameter(torch.Tensor(
+    max(data.num_users, data.num_items), cfg.hidden_size[0]))
+dropout = nn.Dropout(cfg.drop_prob)
+
+dat = RGCLayer(config=cfg, weight_init=random_init)
+dat(x=data.x, edge_index=data.edge_index, edge_type=data.edge_type, edge_norm=None)
+
 
 # %%
 model = GAE(cfg, random_init)

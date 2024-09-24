@@ -30,7 +30,6 @@ class GCEncoder(nn.Module):
     def forward(self, x, edge_index, edge_type, edge_norm):
         # 1. RGCLayer
         features = self.rgc_layer(x, edge_index, edge_type, edge_norm)
-        print('passed RGCLayer')
         u_features = features[:self.num_users]
         i_features = features[self.num_users:]
 
@@ -38,7 +37,6 @@ class GCEncoder(nn.Module):
         u_features, i_features = self.dense_layer(u_features, i_features)
 
         return u_features, i_features
-
 
 
 # Decoder

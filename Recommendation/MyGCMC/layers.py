@@ -37,11 +37,11 @@ class RGCLayer(MessagePassing):
             # each 100 dimention has each realtion node features
             # user-item-weight-sharing
             self.base_weight = nn.Parameter(torch.Tensor(
-                max(self.num_users, self.num_item), self.out_c))
+                max(self.num_users, self.num_item), self.out_c))  # 1682, 500
             self.dropout = nn.Dropout(self.drop_prob)
         else:
             # ordinal basis matrices in_c * out_c = 2625 * 500
-            ord_basis = [nn.Parameter(torch.Tensor(1, in_c * out_c)) for r in range(self.num_relations)]
+            ord_basis = [nn.Parameter(torch.Tensor(1, self.in_c * self.out_c)) for r in range(self.num_relations)]
             self.ord_basis = nn.ParameterList(ord_basis)
 
     def reset_parameters(self):
@@ -61,8 +61,38 @@ class RGCLayer(MessagePassing):
         out = self.message(x_j=x, edge_type=edge_type, edge_norm=edge_norm)
 
         return out
-
+    
     def message(self, x_j, edge_type, edge_norm):
+        # create weight using ordinal weight sharing
+        if self.accum == 'split_stack':
+            weight = torch.cat((self.base_weight[:self.num_users],
+                                self.base_weight[:self.num_item]), 0)
+            # weight = self.dropout(weight)
+            index = x_j
+            
+        else:
+            weight = self.ord_basis[0]  # relation 0 の初期値
+            for relation in range(1, self.num_relations):  # range(1, 5)
+                # 各relationごとにweightを追加していく
+                weight = torch.cat((weight, self.ord_basis[relation]), 0)
+
+            # weight (R x (in_dim * out_dim)) reshape to (R * in_dim) x out_dim
+            # weight has all nodes features
+            weight = weight.reshape(-1, self.out_c)  # (R * in_dim, out_dim) にリシェイプ
+
+            # index has target features index in weight matrix
+            index = edge_type * self.in_c + x_j  # edge_typeとx_jを使ってindexを計算
+            # この操作はindex(160000)がweightマトリクス内のノードidxを指定します。
+
+        # weight = self.node_dropout(weight)
+        # indexに基づいてweightから対応する特徴を取得
+        out = weight[index]
+
+        # 出力はエッジの数 (160000) x 隠れ層の次元数 (500)
+        return out if edge_norm is None else out * edge_norm.reshape(-1, 1)
+
+
+    def message_legacy(self, x_j, edge_type, edge_norm):
         # create weight using ordinal weight sharing
         if self.accum == 'split_stack':
             weight = torch.cat((self.base_weight[:self.num_users],
@@ -71,7 +101,7 @@ class RGCLayer(MessagePassing):
             index = x_j
             
         else:
-            for relation in range(self.num_relations):
+            for relation in range(self.num_relations):  # 5
                 if relation == 0:
                     weight = self.ord_basis[relation]
                 else:
@@ -80,9 +110,9 @@ class RGCLayer(MessagePassing):
 
             # weight (R x (in_dim * out_dim)) reshape to (R * in_dim) x out_dim
             # weight has all nodes features
-            weight = weight.reshape(-1, self.out_c)
+            weight = weight.reshape(-1, self.out_c)  # (13125, 500)
             # index has target features index in weight matrix
-            index = edge_type * self.in_c + x_j
+            index = edge_type * self.in_c + x_j  # [..., 160000] * 2625 + [..., 2625]
             # this opration is that index(160000) specify the nodes idx in weight matrix
             # for getting the features corresponding edge_index
 
