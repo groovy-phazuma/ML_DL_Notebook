@@ -26,7 +26,7 @@ class MNISTM(Dataset):
 
     def __init__(self, train=True):
         super(MNISTM, self).__init__()
-        self.mnist = datasets.MNIST(config.DATA_DIR / 'mnist', train=train,
+        self.mnist = datasets.MNIST(DATA_DIR / 'mnist', train=train,
                                     download=True)
         self.bsds = BSDS500()
         # Fix RNG so the same images are used for blending
