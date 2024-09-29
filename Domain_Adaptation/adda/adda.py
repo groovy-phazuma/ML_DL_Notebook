@@ -20,6 +20,7 @@ from torchvision.datasets import MNIST
 from torchvision.transforms import Compose, ToTensor
 from tqdm import tqdm, trange
 from pathlib import Path
+import matplotlib.pyplot as plt
 
 import sys
 sys.path.append(BASE_DIR+'/github/ML_DL_Notebook/Domain_Adaptation/adda')
@@ -125,19 +126,19 @@ for epoch in range(1, epochs+1):
             source_features = source_model(source_x).view(source_x.shape[0], -1)
             target_features = target_model(target_x).view(target_x.shape[0], -1)
 
-            discriminator_x = torch.cat([source_features, target_features])
-            discriminator_y = torch.cat([torch.ones(source_x.shape[0], device=device),
-                                            torch.zeros(target_x.shape[0], device=device)])  # source=1, target=0
+            discriminator_x = torch.cat([target_features, source_features])
+            discriminator_y = torch.cat([torch.zeros(target_x.shape[0], device=device),
+                                            torch.ones(source_x.shape[0], device=device)])  # source=1, target=0
 
-            preds = discriminator(discriminator_x).squeeze()
-            loss = criterion(preds, discriminator_y)
+            disc_preds = discriminator(discriminator_x).squeeze()
+            loss = criterion(disc_preds, discriminator_y)
 
             discriminator_optim.zero_grad()
             loss.backward()
             discriminator_optim.step()
 
             total_loss += loss.item()
-            total_accuracy += ((preds > 0).long() == discriminator_y.long()).float().mean().item()
+            total_accuracy += ((disc_preds > 0).long() == discriminator_y.long()).float().mean().item()
 
         # Train classifier
         set_requires_grad(target_model, requires_grad=True)
@@ -150,8 +151,8 @@ for epoch in range(1, epochs+1):
             # flipped labels
             discriminator_y = torch.ones(target_x.shape[0], device=device)  # not 1 but 0
 
-            preds = discriminator(target_features).squeeze()
-            loss = criterion(preds, discriminator_y)
+            clf_preds = discriminator(target_features).squeeze()
+            loss = criterion(clf_preds, discriminator_y)
 
             target_optim.zero_grad()
             loss.backward()
@@ -164,4 +165,12 @@ for epoch in range(1, epochs+1):
 
     # Create the full target model and save it
     clf.feature_extractor = target_model
-    torch.save(clf.state_dict(), BASE_DIR+'/github/ML_DL_Notebook/Domain_Adaptation/trained_models/adda.pt')
+    #torch.save(clf.state_dict(), BASE_DIR+'/github/ML_DL_Notebook/Domain_Adaptation/trained_models/adda.pt')
+
+# %%
+plt.plot(disc_preds.cpu().detach().numpy(), label='discriminator')
+plt.plot(clf_preds.cpu().detach().numpy(), label='classifier')
+plt.legend()
+plt.show()
+
+# %%
