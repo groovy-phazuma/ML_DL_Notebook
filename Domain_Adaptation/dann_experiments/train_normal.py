@@ -11,22 +11,21 @@ TODO:
 BASE_DIR = '/workspace/mnt/cluster/HDD/azuma/Others/github/ML_DL_Notebook/Domain_Adaptation/dann_experiments'
 
 import numpy as np
-import torch
-from torch.utils.data.sampler import SubsetRandomSampler
+import matplotlib.pyplot as plt
+
 from tqdm import tqdm
 from pathlib import Path
 
 import torch
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
-from torch.optim import SGD
+from torch.optim import SGD, Adam
 from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import Dataset, DataLoader, ConcatDataset, SubsetRandomSampler
 import torch.nn.functional as F
 
 from torchvision.datasets import MNIST, ImageFolder
 from torchvision.transforms import Compose, ToTensor, Grayscale
-import numpy as np
 
 import sys
 sys.path.append(BASE_DIR)
@@ -36,7 +35,10 @@ import dann_model
 
 import argparse
 
+# show gpu name
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+if device.type == 'cuda':
+    print(torch.cuda.get_device_name(0))
 
 # %%
 # legacy code for ADDA (not DANN)
@@ -90,46 +92,65 @@ combined_dataset = ConcatDataset([custom_mnist, costom_mnistm])
 batch_size = 64
 train_loader = DataLoader(combined_dataset, batch_size=batch_size, shuffle=True, drop_last=True, num_workers=1, pin_memory=True)
 
-# データセット全体のインデックスをシャッフルして、8:2で訓練と検証に分割
+# shuffle dataset and split into train and validation
 dataset_size = len(combined_dataset)
 indices = np.random.permutation(dataset_size)
 split = int(np.floor(0.8 * dataset_size))  # 80% for training
 train_indices, val_indices = indices[:split], indices[split:]
 
-# SubsetRandomSamplerを使って、訓練と検証用のサンプラーを作成
-train_sampler = SubsetRandomSampler(train_indices)
-val_sampler = SubsetRandomSampler(val_indices)
-
+# define dataloaders
+train_loader = DataLoader(combined_dataset, batch_size=batch_size, sampler=SubsetRandomSampler(train_indices))
+val_loader = DataLoader(combined_dataset, batch_size=batch_size, sampler=SubsetRandomSampler(val_indices))
 
 
 # %%
 arg_parser = argparse.ArgumentParser(description='Train a network on MNIST')
-arg_parser.add_argument('--batch-size', type=int, default=64)
 arg_parser.add_argument('--epochs', type=int, default=30)
 args, unknown = arg_parser.parse_known_args(args=[])
 
 args.num_epochs = 50
 
-
-train_loader, val_loader = create_dataloaders(args.batch_size)
 # model definition
 model = dann_model.DomainAdversarialCNN().to(device)
 criterion = model.get_loss_fn()
+optim = Adam(model.parameters(), lr=1e-3)
 
-for x, y_true in tqdm(train_loader, leave=False):
-    x, y_true = x.to(device), y_true.to(device)
-    preds = model(x, alpha=0.5)
-    loss = criterion(
-            preds["logits"],
-            preds["domain_logits"],
-            label,
-            domain_label)
-    loss = criterion(y_pred, y_true)
+# training loop
+trian_loss_history = []
+valid_loss_history = []
+for epoch in tqdm(range(args.num_epochs)):
+    # train
+    running_loss_t = 0.0
+    model.train()
+    for x, label, domain_label in tqdm(train_loader, leave=False):
+        x, label, domain_label = x.to(device), label.to(device), domain_label.to(device)
+        preds = model(x, alpha=0.5)
+        loss_t = criterion(
+                preds["logits"],
+                preds["domain_logits"],
+                label,
+                domain_label)
 
-    if optim is not None:
-        optim.zero_grad()
-        loss.backward()
-        optim.step()
-
+        if optim is not None:
+            optim.zero_grad()
+            loss_t.backward()
+            optim.step()
+        
+        running_loss_t += loss_t.item()
+    trian_loss_history.append(running_loss_t/len(train_loader))
+        
+    # valid
+    running_loss_v = 0.0
+    model.eval()
+    for x, label, domain_label in tqdm(val_loader, leave=False):
+        x, label, domain_label = x.to(device), label.to(device), domain_label.to(device)
+        preds = model(x, alpha=0.5)
+        loss_v = criterion(
+                preds["logits"],
+                preds["domain_logits"],
+                label,
+                domain_label)
+        running_loss_v += loss_v.item()
+    valid_loss_history.append(running_loss_v/len(val_loader))
 
 # %%
