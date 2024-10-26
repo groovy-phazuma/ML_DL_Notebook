@@ -1,5 +1,7 @@
 ./Domain_Adaptation/trained_models/
 
+Domain_Adaptation/dann_experiments/_checkpoints/*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
